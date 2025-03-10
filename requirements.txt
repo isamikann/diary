@@ -6,3 +6,4 @@ calendar
 base64
 io
 datetime
+distutils
