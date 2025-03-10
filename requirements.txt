@@ -2,3 +2,7 @@ matplotlib
 japanize_matplotlib
 plotly
 wordcloud
+calendar   
+base64
+io
+datetime
