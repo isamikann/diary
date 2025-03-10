@@ -7,3 +7,8 @@ base64
 io
 datetime
 distutils
+pandas
+os
+json
+numpy
+janome
