@@ -1,8 +1,7 @@
 matplotlib
 japanize_matplotlib
 plotly
-wordcloud
-calendar   
+wordcloud 
 base64
 io
 datetime
