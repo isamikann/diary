@@ -2,7 +2,6 @@ matplotlib
 japanize_matplotlib
 plotly
 wordcloud 
-base64
 io
 datetime
 distutils
