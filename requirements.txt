@@ -1,7 +1,9 @@
-matplotlib
-japanize_matplotlib
-plotly
-wordcloud
-streamlit
-pandas
-numpy
+matplotlib  
+japanize_matplotlib  
+plotly  
+wordcloud  
+streamlit  
+numpy  
+pandas  
+setuptools  
+packaging  
