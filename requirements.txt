@@ -8,3 +8,4 @@ pandas
 setuptools  
 packaging  
 janome
+streamlit_plotly_events
