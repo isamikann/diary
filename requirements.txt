@@ -9,3 +9,4 @@ setuptools
 packaging  
 janome
 streamlit_plotly_events
+sklearn.feature_extraction.text
