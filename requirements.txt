@@ -1,12 +1,7 @@
 matplotlib
 japanize_matplotlib
 plotly
-wordcloud 
-io
-datetime
-distutils
+wordcloud
+streamlit
 pandas
-os
-json
 numpy
-janome
