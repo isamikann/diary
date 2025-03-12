@@ -13,6 +13,7 @@ import base64
 from io import BytesIO
 from janome.tokenizer import Tokenizer
 import plotly.graph_objects as go
+import requests
 
 # 日本語フォントの設定
 japanize_matplotlib.japanize()
