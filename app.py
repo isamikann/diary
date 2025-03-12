@@ -17,25 +17,24 @@ import plotly.graph_objects as go
 # 日本語フォントの設定
 japanize_matplotlib.japanize()
 
-# JSON ファイルのパス
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_FILE = os.path.join(BASE_DIR, "diary.json")
-
-# JSONを読み込む関数
-def load_diary():
-    if os.path.exists(JSON_FILE):
-        with open(JSON_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
-# JSONにデータを保存する関数
-def save_diary(data):
-    try:
-        with open(JSON_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        st.write(f"Data successfully saved to {JSON_FILE}")
-    except Exception as e:
-        st.write(f"Error saving data: {e}")
+# JSON ファイルのパス  
+JSON_FILE = "diary.json"  
+  
+# JSONを読み込む関数  
+def load_diary():  
+    if os.path.exists(JSON_FILE):  
+        with open(JSON_FILE, "r", encoding="utf-8") as f:  
+            return json.load(f)  
+    return []  
+  
+# JSONにデータを保存する関数  
+def save_diary(data):  
+    try:  
+        with open(JSON_FILE, "w", encoding="utf-8") as f:  
+            json.dump(data, f, indent=4, ensure_ascii=False)  
+        st.write(f"Data successfully saved to {JSON_FILE}")  
+    except Exception as e:  
+        st.write(f"Error saving data: {e}")  
 
 # 日記を追加・更新する関数（同じ日付のデータがあれば上書き）
 def add_entry(date, content, weather, health, rating, activities=None, mood=None, memo=None, sleep_hours=None):
