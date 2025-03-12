@@ -10,3 +10,4 @@ packaging
 janome
 streamlit_plotly_events
 scikit-learn
+requests
