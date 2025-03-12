@@ -21,7 +21,7 @@ japanize_matplotlib.japanize()
 # GitHub リポジトリ情報  
 GITHUB_REPO = "isamikann/daily"  
 GITHUB_FILE_PATH = "diary.json"  # JSON ファイルのパス  
-GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]  # Streamlit secrets に保存したトークン  
+GITHUB_TOKEN = "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"  # Streamlit secrets に保存したトークン  
   
 def get_file_sha(repo, path, token):  
     url = f"https://api.github.com/repos/{repo}/contents/{path}?ref=main"  
