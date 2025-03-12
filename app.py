@@ -17,24 +17,40 @@ import plotly.graph_objects as go
 # 日本語フォントの設定
 japanize_matplotlib.japanize()
 
-# JSON ファイルのパス  
-JSON_FILE = "diary.json"  
+# GitHub リポジトリ情報  
+GITHUB_REPO = "isamikann/daily"  
+GITHUB_FILE_PATH = "diary.json"  # JSON ファイルのパス  
+GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]  # Streamlit secrets に保存したトークン  
   
-# JSONを読み込む関数  
+def get_file_sha(repo, path, token):  
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"  
+    headers = {"Authorization": f"token {token}"}  
+    response = requests.get(url, headers=headers)  
+    response.raise_for_status()  
+    return response.json()["sha"]  
+  
+def update_github_file(repo, path, content, token, message="Update file"):  
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"  
+    sha = get_file_sha(repo, path, token)  
+    headers = {"Authorization": f"token {token}"}  
+    data = {  
+        "message": message,  
+        "content": content,  
+        "sha": sha  
+    }  
+    response = requests.put(url, headers=headers, data=json.dumps(data))  
+    response.raise_for_status()  
+    return response.json()  
+  
 def load_diary():  
-    if os.path.exists(JSON_FILE):  
-        with open(JSON_FILE, "r", encoding="utf-8") as f:  
-            return json.load(f)  
-    return []  
+    url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_FILE_PATH}"  
+    response = requests.get(url)  
+    response.raise_for_status()  
+    return response.json()  
   
-# JSONにデータを保存する関数  
 def save_diary(data):  
-    try:  
-        with open(JSON_FILE, "w", encoding="utf-8") as f:  
-            json.dump(data, f, indent=4, ensure_ascii=False)  
-        st.write(f"Data successfully saved to {JSON_FILE}")  
-    except Exception as e:  
-        st.write(f"Error saving data: {e}")  
+    encoded_content = base64.b64encode(json.dumps(data, ensure_ascii=False).encode()).decode()  
+    update_github_file(GITHUB_REPO, GITHUB_FILE_PATH, encoded_content, GITHUB_TOKEN)  
 
 # 日記を追加・更新する関数（同じ日付のデータがあれば上書き）
 def add_entry(date, content, weather, health, rating, activities=None, mood=None, memo=None, sleep_hours=None):
