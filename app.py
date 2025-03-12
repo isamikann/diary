@@ -24,14 +24,14 @@ GITHUB_FILE_PATH = "diary.json"  # JSON ファイルのパス
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]  # Streamlit secrets に保存したトークン  
   
 def get_file_sha(repo, path, token):  
-    url = f"https://api.github.com/repos/isamikann/daily/contents/diary.json"  
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"  
     headers = {"Authorization": f"token {token}"}  
     response = requests.get(url, headers=headers)  
     response.raise_for_status()  
     return response.json()["sha"]  
-  
+
 def update_github_file(repo, path, content, token, message="Update file"):  
-    url = f"https://api.github.com/repos/isamikann/daily/contents/diary.json" 
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"  
     sha = get_file_sha(repo, path, token)  
     headers = {"Authorization": f"token {token}"}  
     data = {  
@@ -41,7 +41,7 @@ def update_github_file(repo, path, content, token, message="Update file"):
     }  
     response = requests.put(url, headers=headers, data=json.dumps(data))  
     response.raise_for_status()  
-    return response.json()  
+    return response.json()
   
 def load_diary():  
     url = f"https://raw.githubusercontent.com/isamikann/dairy/main/diary.json" 
