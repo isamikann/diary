@@ -31,7 +31,7 @@ def get_file_sha(repo, path, token):
     return response.json()["sha"]  
   
 def update_github_file(repo, path, content, token, message="Update file"):  
-    url = f"https://api.github.com/repos/{repo}/contents/{path}"  
+    url = f"https://api.github.com/repos/isamikann/daily/contents/diary.json" 
     sha = get_file_sha(repo, path, token)  
     headers = {"Authorization": f"token {token}"}  
     data = {  
