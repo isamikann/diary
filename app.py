@@ -19,7 +19,7 @@ import requests
 japanize_matplotlib.japanize()
 
 # GitHub リポジトリ情報  
-GITHUB_REPO = "isamikann/daily"  
+GITHUB_REPO = "isamikann/dairy"  
 GITHUB_FILE_PATH = "diary.json"  # JSON ファイルのパス  
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]  # Streamlit secrets に保存したトークン  
   
