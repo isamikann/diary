@@ -44,7 +44,7 @@ def update_github_file(repo, path, content, token, message="Update file"):
     return response.json()  
   
 def load_diary():  
-    url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{GITHUB_FILE_PATH}"  
+    url = f"https://raw.githubusercontent.com/isamikann/dairy/main/diary.json" 
     response = requests.get(url)  
     response.raise_for_status()  
     return response.json()  
