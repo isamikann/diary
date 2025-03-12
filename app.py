@@ -18,7 +18,8 @@ import plotly.graph_objects as go
 japanize_matplotlib.japanize()
 
 # JSON ファイルのパス
-JSON_FILE = "diary.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+JSON_FILE = os.path.join(BASE_DIR, "diary.json")
 
 # 📌 JSONを読み込む関数
 def load_diary():
