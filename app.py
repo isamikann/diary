@@ -55,33 +55,28 @@ def save_diary(data):
 
 # 日記を追加・更新する関数（同じ日付のデータがあれば上書き）
 def add_entry(date, content, weather, health, rating, activities=None, mood=None, memo=None, sleep_hours=None):
-    try:  
-        diary = load_diary()  
-        existing_entry = next((d for d in diary if d["date"] == date), None)  
-          
-        entry_data = {  
-            "date": date,  
-            "content": content,  
-            "weather": weather,  
-            "health": health,  
-            "rating": rating,  
-            "activities": activities or [],  
-            "mood": mood or "",  
-            "memo": memo or "",  
-            "sleep_hours": sleep_hours or 7.0  
-        }  
-          
-        if existing_entry:  
-            for key, value in entry_data.items():  
-                existing_entry[key] = value  
-        else:  
-            diary.append(entry_data)  
-          
-        save_diary(diary)  
-        st.success(f"✅ {date} の日記を保存しました！")  
-        st.balloons()  
-    except Exception as e:  
-        st.error(f"💾 データの保存に失敗しました: {e}")  
+      diary = load_diary()  
+      existing_entry = next((d for d in diary if d["date"] == date), None)  
+        
+      entry_data = {  
+          "date": date,  
+          "content": content,  
+          "weather": weather,  
+          "health": health,  
+          "rating": rating,  
+          "activities": activities or [],  
+          "mood": mood or "",  
+          "memo": memo or "",  
+          "sleep_hours": sleep_hours or 7.0  
+      }  
+        
+      if existing_entry:  
+          for key, value in entry_data.items():  
+              existing_entry[key] = value  
+      else:  
+          diary.append(entry_data)  
+        
+      save_diary(diary)  
 
 
 # 📌 過去の日記を取得する関数（特定の日付）
