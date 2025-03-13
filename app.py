@@ -19,7 +19,7 @@ import requests
 japanize_matplotlib.japanize()
 
 # GitHub リポジトリ情報  
-GITHUB_REPO = "isamikann/dairy"  
+GITHUB_REPO = "isamikann/diary"  
 GITHUB_FILE_PATH = "diary.json"  # JSON ファイルのパス  
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]  # Streamlit secrets に保存したトークン  
   
@@ -44,7 +44,7 @@ def update_github_file(repo, path, content, token, message="Update file"):
     return response.json()
   
 def load_diary():  
-    url = f"https://raw.githubusercontent.com/isamikann/dairy/main/diary.json?ref=main" 
+    url = f"https://raw.githubusercontent.com/isamikann/diary/main/diary.json?ref=main" 
     response = requests.get(url)  
     response.raise_for_status()  
     return response.json()  
