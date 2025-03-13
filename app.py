@@ -328,4 +328,368 @@ def display_calendar(diary):
                     </div>  
                     """, unsafe_allow_html=True)  
                 else:  
-                    cols[i
+                                        cols[i].markdown(f"""  
+                    <div style='text-align: center; padding: 5px;'>  
+                        <p>{day}</p>  
+                    </div>  
+                    """, unsafe_allow_html=True)  
+  
+# 📊 基本統計データ可視化  
+def show_statistics():  
+    st.header("📊 データ分析")  
+    diary = load_diary()  
+    if len(diary) == 0:  
+        st.info("まだデータがありません。")  
+        return  
+    if len(diary) < 3:  
+        st.warning("統計分析には最低3件のデータが必要です。もう少し日記を書いてみましょう。")  
+        return  
+      
+    df = pd.DataFrame(diary)  
+    df["date"] = pd.to_datetime(df["date"])  
+    df = df.sort_values("date")  
+    df["weekday"] = df["date"].dt.day_name()  
+    weekday_map = {  
+        "Monday": "月曜日", "Tuesday": "火曜日", "Wednesday": "水曜日",   
+        "Thursday": "木曜日", "Friday": "金曜日", "Saturday": "土曜日", "Sunday": "日曜日"  
+    }  
+    df["weekday_jp"] = df["weekday"].map(weekday_map)  
+    tabs = st.tabs(["評価の推移", "天気と体調", "曜日と活動", "キーワード分析", "睡眠時間"])  
+  
+    # タブ1: 評価の推移  
+    with tabs[0]:  
+        st.subheader("評価の推移")  
+        fig = px.line(df, x="date", y="rating",   
+                      title="日々の評価の推移",  
+                      labels={"rating": "評価", "date": "日付"},  
+                      markers=True)  
+        if len(df) >= 7:  
+            df["rolling_avg"] = df["rating"].rolling(window=7).mean()  
+            fig.add_scatter(x=df["date"], y=df["rolling_avg"], mode="lines", name="7日間移動平均")  
+        st.plotly_chart(fig, use_container_width=True)  
+  
+        rating_counts = df['rating'].value_counts().sort_index()  
+        for i in range(1, 6):  
+            if i not in rating_counts:  
+                rating_counts[i] = 0  
+        rating_counts = rating_counts.sort_index()  
+        fig = go.Figure(data=[go.Bar(x=rating_counts.index, y=rating_counts.values)])  
+        fig.update_layout(  
+            title='評価の分布',  
+            xaxis_title='評価',  
+            yaxis_title='日数',  
+            xaxis=dict(  
+                tickmode='linear',  
+                dtick=1,  
+                range=[0.5, 5.5]  
+            ),  
+            yaxis=dict(  
+                tickmode='linear',  
+            )  
+        )  
+        st.plotly_chart(fig, use_container_width=True)  
+  
+        st.subheader("評価の特徴")  
+        col1, col2, col3 = st.columns(3)  
+        with col1:  
+            st.metric("平均評価", f"{df['rating'].mean():.1f}")  
+        with col2:  
+            st.metric("最高評価の日数", len(df[df["rating"] == 5]))  
+        with col3:  
+            today = pd.Timestamp.today()  
+            last_week = df[(df["date"] >= today - timedelta(days=14)) & (df["date"] < today - timedelta(days=7))]  
+            this_week = df[(df["date"] >= today - timedelta(days=7)) & (df["date"] <= today)]  
+            if not last_week.empty and not this_week.empty:  
+                last_week_avg = last_week["rating"].mean()  
+                this_week_avg = this_week["rating"].mean()  
+                delta = this_week_avg - last_week_avg  
+                st.metric("先週比", f"{this_week_avg:.1f}", f"{delta:+.1f}")  
+            else:  
+                st.metric("先週比", "データ不足")  
+  
+    # タブ2: 天気と体調  
+    with tabs[1]:  
+        st.subheader("天気と体調の影響")  
+        col1, col2 = st.columns(2)  
+        with col1:  
+            weather_avg = df.groupby("weather")["rating"].mean().sort_values(ascending=False)  
+            weather_count = df.groupby("weather").size()  
+            weather_fig = px.bar(  
+                x=weather_avg.index,   
+                y=weather_avg.values,  
+                title="天気別の平均評価",  
+                labels={"x": "天気", "y": "平均評価"},  
+                text=[f"({count}日)" for count in weather_count[weather_avg.index]]  
+            )  
+            st.plotly_chart(weather_fig, use_container_width=True)  
+            best_weather = weather_avg.idxmax()  
+            st.info(f"☀️ 評価が最も高い天気は「{best_weather}」です（平均{weather_avg.max():.1f}点）")  
+        with col2:  
+            health_avg = df.groupby("health")["rating"].mean().sort_values(ascending=False)  
+            health_count = df.groupby("health").size()  
+            health_fig = px.bar(  
+                x=health_avg.index,   
+                y=health_avg.values,  
+                title="体調別の平均評価",  
+                labels={"x": "体調", "y": "平均評価"},  
+                text=[f"({count}日)" for count in health_count[health_avg.index]]  
+            )  
+            st.plotly_chart(health_fig, use_container_width=True)  
+            best_health = health_avg.idxmax()  
+            st.info(f"💪 評価が最も高い体調は「{best_health}」です（平均{health_avg.max():.1f}点）")  
+        if "mood" in df.columns and df["mood"].notna().any() and (df["mood"] != "選択しない").any():  
+            st.subheader("気分の分析")  
+            mood_data = df[df["mood"] != "選択しない"]  
+            if not mood_data.empty:  
+                mood_avg = mood_data.groupby("mood")["rating"].mean().sort_values(ascending=False)  
+                mood_count = mood_data.groupby("mood").size()  
+                mood_fig = px.bar(  
+                    x=mood_avg.index,   
+                    y=mood_avg.values,  
+                    title="気分別の平均評価",  
+                    labels={"x": "気分", "y": "平均評価"},  
+                    text=[f"({count}日)" for count in mood_count[mood_avg.index]]  
+                )  
+                st.plotly_chart(mood_fig, use_container_width=True)  
+                best_mood = mood_avg.idxmax()  
+                st.info(f"🧠 評価が最も高い気分は「{best_mood}」です（平均{mood_avg.max():.1f}点）")  
+  
+    # タブ3: 曜日と活動  
+    with tabs[2]:  
+        col1, col2 = st.columns(2)  
+        with col1:  
+            st.subheader("曜日別の評価")  
+            weekday_order = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日"]  
+            weekday_avg = df.groupby("weekday_jp")["rating"].mean()  
+            weekday_avg = weekday_avg.reindex(weekday_order)  
+            weekday_fig = px.bar(  
+                x=weekday_avg.index,   
+                y=weekday_avg.values,  
+                title="曜日別の平均評価",  
+                labels={"x": "曜日", "y": "平均評価"}  
+            )  
+            st.plotly_chart(weekday_fig, use_container_width=True)  
+            best_weekday = weekday_avg.idxmax()  
+            st.info(f"📅 評価が最も高い曜日は「{best_weekday}」です（平均{weekday_avg.max():.1f}点）")  
+        with col2:  
+            st.subheader("活動と評価の関係")  
+            if "activities" in df.columns:  
+                all_activities = []  
+                for acts in df["activities"]:  
+                    if isinstance(acts, list):  
+                        all_activities.extend(acts)  
+                activity_data = {}  
+                for activity in set(all_activities):  
+                    days_with_activity = df[df["activities"].apply(lambda x: activity in x if isinstance(x, list) else False)]  
+                    if not days_with_activity.empty:  
+                        avg_rating = days_with_activity["rating"].mean()  
+                        activity_data[activity] = {  
+                            "average": avg_rating,  
+                            "count": len(days_with_activity)  
+                        }  
+                if activity_data:  
+                    activities_df = pd.DataFrame([  
+                        {"活動": activity, "平均評価": data["average"], "日数": data["count"]}  
+                        for activity, data in activity_data.items()  
+                    ]).sort_values("平均評価", ascending=False)  
+                    activity_fig = px.bar(  
+                        activities_df,  
+                        x="活動",   
+                        y="平均評価",  
+                        title="活動別の平均評価",  
+                        text=activities_df["日数"].apply(lambda x: f"({x}日)")  
+                    )  
+                    st.plotly_chart(activity_fig, use_container_width=True)  
+                    if len(activities_df) >= 3:  
+                        st.success("⭐ 評価が高い活動トップ3:")  
+                        for i, (_, row) in enumerate(activities_df.head(3).iterrows()):  
+                            st.write(f"{i+1}. **{row['活動']}** (平均{row['平均評価']:.1f}点, {row['日数']}日)")  
+                    elif len(activities_df) > 0:  
+                        st.success(f"⭐ 評価が最も高い活動は「{activities_df.iloc[0]['活動']}」です")  
+                else:  
+                    st.info("活動データがまだ十分にありません。")  
+            else:  
+                st.info("活動データが記録されていません。")  
+  
+    # タブ4: キーワード分析  
+    with tabs[3]:  
+        st.subheader("日記のキーワード分析")  
+        all_text = " ".join(df["content"].astype(str).tolist())  
+        if all_text.strip():  
+            t = Tokenizer()  
+            wakati_text = []  
+            japanese_stopwords = ["てる", "いる", "なる", "れる", "する", "ある", "こと", "これ", "さん", "して",   
+                                  "くれる", "やる", "くる", "しまう", "いく", "ない", "のだ", "よう", "あり", "ため",   
+                                  "ところ", "ます", "です", "から", "まで", "たり", "けど", "ので", "たい", "なる",   
+                                  "もの", "それ", "その"]  
+            for token in t.tokenize(all_text):  
+                part_of_speech = token.part_of_speech.split(',')[0]  
+                base_form = token.base_form  
+                if part_of_speech in ['名詞', '動詞', '形容詞'] and base_form not in japanese_stopwords:  
+                    wakati_text.append(base_form)  
+            wakati_all_text = " ".join(wakati_text)  
+            if wakati_all_text.strip():  
+                wordcloud = WordCloud(  
+                    width=800,   
+                    height=400,   
+                    background_color='white',  
+                    font_path='./ipaexg.ttf',   
+                    stopwords=set(japanese_stopwords),   
+                    collocations=False,  
+                    max_words=100  
+                ).generate(wakati_all_text)  
+                fig, ax = plt.subplots(figsize=(10, 5))  
+                ax.imshow(wordcloud, interpolation='bilinear')  
+                ax.axis("off")  
+                st.pyplot(fig)  
+                st.write("📊 感情ごとの評価平均")  
+                emotion_keywords = {  
+                    "ポジティブ": ["嬉しい", "楽しい", "幸せ", "わくわく", "最高", "喜び", "素晴らしい", "良い", "成功", "達成"],  
+                    "ネガティブ": ["悲しい", "辛い", "苦しい", "不安", "心配", "失敗", "残念", "怖い", "疲れる", "しんどい"],  
+                    "中立/その他": ["考える", "思う", "感じる", "予定", "明日", "今日", "昨日", "たぶん", "かもしれない"]  
+                }  
+                emotion_ratings = {emotion: [] for emotion in emotion_keywords}  
+                for _, row in df.iterrows():  
+                    wakati_content = [token.base_form for token in t.tokenize(row["content"]) if token.part_of_speech.split(',')[0] in ['名詞', '動詞', '形容詞']]  
+                    rating = row["rating"]  
+                    for emotion, keywords in emotion_keywords.items():  
+                        if any(keyword in wakati_content for keyword in keywords):  
+                            emotion_ratings[emotion].append(rating)  
+                emotion_avg = {emotion: np.mean(ratings) if ratings else 0 for emotion, ratings in emotion_ratings.items()}  
+                emotion_count = {emotion: len(ratings) for emotion, ratings in emotion_ratings.items()}  
+                fig = px.bar(  
+                    x=list(emotion_avg.keys()),  
+                    y=list(emotion_avg.values()),  
+                    title="感情表現ごとの平均評価",  
+                    labels={"x": "感情カテゴリ", "y": "平均評価"},  
+                    text=[f"({count}日)" for count in emotion_count.values()]  
+                )  
+                st.plotly_chart(fig, use_container_width=True)  
+                if any(emotion_avg.values()):  
+                    best_emotion = max(emotion_avg.items(), key=lambda x: x[1])  
+                    if best_emotion[1] > 0:  
+                        st.info(f"💭 「{best_emotion[0]}」な表現をした日の平均評価が最も高いです（平均{best_emotion[1]:.1f}点）")  
+            else:  
+                st.info("単語抽出できませんでした")  
+        else:  
+            st.info("テキストデータがまだ十分にありません。")  
+  
+    # タブ5: 睡眠時間  
+    with tabs[4]:  
+        st.subheader("睡眠時間と評価の関係")  
+        sleep_rating_scatter = px.scatter(  
+            df,   
+            x="sleep_hours",   
+            y="rating",   
+            title="睡眠時間と評価の関係",  
+            labels={"sleep_hours": "睡眠時間（時間）", "rating": "評価"}  
+        )  
+        st.plotly_chart(sleep_rating_scatter, use_container_width=True)  
+        correlation = df["sleep_hours"].corr(df["rating"])  
+        st.write(f"睡眠時間と評価の相関係数：{correlation:.2f}")  
+        sleep_avg = df.groupby("sleep_hours")["rating"].mean().sort_index()  
+        sleep_avg_fig = px.bar(  
+            x=sleep_avg.index,   
+            y=sleep_avg.values,  
+            title="睡眠時間別の平均評価",  
+            labels={"x": "睡眠時間（時間）", "y": "平均評価"}  
+        )  
+        st.plotly_chart(sleep_avg_fig, use_container_width=True)  
+        if correlation > 0.5:  
+            st.info(f"相関係数{correlation:.2f}:睡眠時間が長いほど評価が高い傾向があります。")  
+        elif correlation < -0.5:  
+            st.info(f"相関係数{correlation:.2f}:睡眠時間が長いほど評価が低い傾向があります。")  
+        else:  
+            st.info(f"相関係数{correlation:.2f}:睡眠時間と評価に関連はあまりないようです。")  
+        best_sleep_hours = sleep_avg.idxmax()  
+        st.info(f"🛌 評価が最も高い睡眠時間は「{best_sleep_hours}時間」です（平均{sleep_avg.max():.1f}点）")  
+  
+# CSV形式でエクスポートする関数  
+def export_to_csv(diary_data):  
+    df = pd.DataFrame(diary_data)  
+    if "sleep_hours" not in df.columns:  
+        df["sleep_hours"] = ""  
+    df = df[["date", "content", "weather", "health", "rating", "activities", "mood", "memo", "sleep_hours"]]  
+    return df.to_csv(index=False).encode('utf-8-sig')  
+  
+# メイン関数  
+def main():  
+    # スタイル適用  
+    theme = setup_page()  
+  
+    # サイドバーメニュー  
+    menu = st.sidebar.radio(  
+        "メニュー",  
+        ["✍️ 日記を書く", "📅 過去の日記", "📊 データ分析", "⚙️ 設定・ヘルプ"],  
+    )  
+  
+    if menu == "✍️ 日記を書く":  
+        diary_form()  
+    elif menu == "📅 過去の日記":  
+        display_entries()  
+    elif menu == "📊 データ分析":  
+        show_statistics()  
+    elif menu == "⚙️ 設定・ヘルプ":  
+        st.header("⚙️ 設定・ヘルプ")  
+        with st.expander("📝 アプリについて", expanded=True):  
+            st.markdown("""  
+            ### シンプル日記アプリ  
+  
+            このアプリは、日々の出来事や感情を記録するためのシンプルな日記アプリです。  
+  
+            **主な機能:**  
+            - 天気、体調、気分、活動などを記録  
+            - 過去の日記の検索・閲覧  
+            - データ分析と可視化  
+            - CSVエクスポート  
+  
+            **使い方:**  
+            1. サイドバーメニューから「日記を書く」を選択  
+            2. 日付、天気、体調などを入力  
+            3. 日記の内容を記入して保存  
+            4. 「過去の日記」で過去の記録を確認  
+            5. 「データ分析」で傾向を分析  
+            """)  
+        with st.expander("🔄 データのバックアップ"):  
+            st.write("日記データのバックアップ・復元")  
+  
+            # データのエクスポート  
+            diary = load_diary()  
+            if diary:  
+                st.download_button(  
+                    "📥 データをJSONファイルとしてバックアップ",  
+                    data=json.dumps(diary, indent=4, ensure_ascii=False),  
+                    file_name="diary_backup.json",  
+                    mime="application/json",  
+                )  
+  
+            # データのインポート  
+            st.write("バックアップデータの復元:")  
+            uploaded_file = st.file_uploader("JSONファイルをアップロード", type=["json"])  
+  
+            if uploaded_file is not None:  
+                if st.button("ファイルから復元"):  
+                    try:  
+                        imported_data = json.loads(uploaded_file.getvalue().decode("utf-8"))  
+                        save_diary(imported_data)  
+                        st.success("データを正常に復元しました！")  
+                    except Exception as e:  
+                        st.error(f"エラーが発生しました: {e}")  
+  
+        with st.expander("💾 全データの削除"):  
+            st.warning("⚠️ 注意: すべての日記データを削除します。この操作は元に戻せません。")  
+  
+            if st.button("すべてのデータを削除", key="delete_all"):  
+                if os.path.exists(GITHUB_FILE_PATH):  
+                    os.remove(GITHUB_FILE_PATH)  
+                    st.success("全データを削除しました。")  
+                    st.balloons()  
+                else:  
+                    st.info("データファイルが存在しません。")  
+  
+        # フッター  
+        st.markdown("---")  
+        st.markdown("© 2025 分析日記アプリ ver.1.0")  
+  
+if __name__ == "__main__":  
+    main()  
