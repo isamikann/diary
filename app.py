@@ -43,7 +43,7 @@ def update_github_file(repo, path, content, token, message="Update file"):
     response.raise_for_status()  
     return response.json()
 
-@st.cache(hash_funcs={dict: lambda _: None})  # キャッシュキーを動的に変更  
+@st.cache_data 
 def load_diary():  
     url = f"https://raw.githubusercontent.com/isamikann/diary/main/diary.json?ref=main" 
     response = requests.get(url)  
