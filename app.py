@@ -940,7 +940,7 @@ def main():
     # サイドバーメニュー
     menu = st.sidebar.radio(
         "メニュー",
-        ["✍️ 日記を書く", "📅 過去の日記", "📊 データ分析", "⚙️ 設定・ヘルプ"],
+        ["✍️ 日記を書く", "📅 過去の日記", "📊 データ分析", "📊高度な可視化分析",　"⚙️ 設定・ヘルプ"],
     )
     
     if menu == "✍️ 日記を書く":
@@ -952,7 +952,7 @@ def main():
     elif menu == "📊 データ分析":
         show_statistics()
       
-    elif menu == "📊 高度な可視化分析":
+    elif menu == "📊高度な可視化分析":
         advanced_visualizations(df)
     
     elif menu == "⚙️ 設定・ヘルプ":
