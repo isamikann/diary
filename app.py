@@ -774,7 +774,10 @@ def show_statistics():
 def advanced_visualizations():
     st.subheader("🔍 高度な可視化分析")
 
-    df = load_diary()
+    diary = load_diary()
+    
+    # DataFrame に変換
+    df = pd.DataFrame(diary)
     
     # データの前処理
     df['date'] = pd.to_datetime(df['date'])
