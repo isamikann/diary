@@ -771,7 +771,7 @@ def show_statistics():
         best_sleep_hours = sleep_avg.idxmax()
         st.info(f"🛌 評価が最も高い睡眠時間は「{best_sleep_hours}時間」です（平均{sleep_avg.max():.1f}点）")
 
-def advanced_visualizations(df):
+def advanced_visualizations():
     st.subheader("🔍 高度な可視化分析")
 
     df = load_diary()
