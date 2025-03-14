@@ -771,6 +771,148 @@ def show_statistics():
         best_sleep_hours = sleep_avg.idxmax()
         st.info(f"🛌 評価が最も高い睡眠時間は「{best_sleep_hours}時間」です（平均{sleep_avg.max():.1f}点）")
 
+def advanced_visualizations(df):
+    st.subheader("🔍 高度な可視化分析")
+    
+    # データの前処理
+    df['date'] = pd.to_datetime(df['date'])
+    df['weekday'] = df['date'].dt.day_name()
+    df['month'] = df['date'].dt.month_name()
+    
+    # タブで分析項目を分ける
+    viz_tabs = st.tabs(["時系列ヒートマップ", "相関マトリックス", "活動ネットワーク"])
+    
+    # タブ1: 時系列ヒートマップ
+    with viz_tabs[0]:
+        st.write("📅 週別・月別の評価ヒートマップ")
+        
+        # 日付から年と週番号を抽出
+        df['year'] = df['date'].dt.isocalendar().year
+        df['week'] = df['date'].dt.isocalendar().week
+        
+        # ピボットテーブルで週と曜日でデータを集計
+        pivot_df = df.pivot_table(
+            index=['year', 'week'], 
+            columns='weekday', 
+            values='rating', 
+            aggfunc='mean'
+        ).reset_index()
+        
+        # 年と週から日付文字列を作成
+        def get_week_label(year, week):
+            try:
+                # その週の月曜日を取得
+                monday = datetime.strptime(f'{year}-{week}-1', '%Y-%W-%w')
+                return monday.strftime('%m/%d週')
+            except:
+                return f"{year}-W{week}"
+        
+        # ラベルを作成
+        week_labels = [get_week_label(r['year'], r['week']) for i, r in pivot_df.iterrows()]
+        
+        # 曜日の順序を設定
+        weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        pivot_df = pivot_df[['year', 'week'] + [day for day in weekday_order if day in pivot_df.columns]]
+        
+        # ヒートマップ用のデータを準備
+        heatmap_data = pivot_df.iloc[:, 2:].values  # 年・週を除く
+        
+        # ヒートマップの作成
+        fig = go.Figure(data=go.Heatmap(
+            z=heatmap_data,
+            x=[day for day in weekday_order if day in pivot_df.columns],
+            y=week_labels,
+            colorscale='RdYlGn',  # 赤（低評価）から緑（高評価）のカラースケール
+            zmin=1, zmax=5
+        ))
+        
+        fig.update_layout(
+            title='週別・曜日別の平均評価ヒートマップ',
+            xaxis_title='曜日',
+            yaxis_title='週',
+            height=600
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # インサイトの表示
+        best_week_idx = np.argmax(pivot_df.iloc[:, 2:].mean(axis=1))
+        best_week = week_labels[best_week_idx]
+        st.info(f"📊 評価が最も高かった週は {best_week} でした。")
+    
+    # タブ2: 相関マトリックス
+    with viz_tabs[1]:
+        st.write("🔄 各要素間の相関関係")
+        
+        # 相関分析用のデータを準備
+        corr_data = pd.DataFrame()
+        corr_data['rating'] = df['rating']
+        corr_data['sleep_hours'] = df['sleep_hours']
+        
+        # 天気をダミー変数に変換
+        if 'weather' in df.columns:
+            weather_dummies = pd.get_dummies(df['weather'], prefix='weather')
+            corr_data = pd.concat([corr_data, weather_dummies], axis=1)
+        
+        # 体調をダミー変数に変換
+        if 'health' in df.columns:
+            health_dummies = pd.get_dummies(df['health'], prefix='health')
+            corr_data = pd.concat([corr_data, health_dummies], axis=1)
+        
+        # 気分をダミー変数に変換
+        if 'mood' in df.columns:
+            mood_data = df[df['mood'] != '選択しない']
+            if not mood_data.empty:
+                mood_dummies = pd.get_dummies(mood_data['mood'], prefix='mood')
+                # インデックスをリセットして結合
+                mood_dummies.index = mood_data.index
+                corr_data = pd.concat([corr_data, mood_dummies.reindex(corr_data.index, fill_value=0)], axis=1)
+        
+        # 活動をダミー変数に変換
+        if 'activities' in df.columns:
+            all_activities = set()
+            for acts in df['activities']:
+                if isinstance(acts, list):
+                    all_activities.update(acts)
+            
+            for activity in all_activities:
+                corr_data[f'activity_{activity}'] = df['activities'].apply(
+                    lambda x: 1 if isinstance(x, list) and activity in x else 0
+                )
+        
+        # 曜日をダミー変数に変換
+        weekday_dummies = pd.get_dummies(df['weekday'], prefix='weekday')
+        corr_data = pd.concat([corr_data, weekday_dummies], axis=1)
+        
+        # 相関行列を計算
+        corr_matrix = corr_data.corr()
+        
+        # 相関マトリックスのヒートマップを作成
+        fig = go.Figure(data=go.Heatmap(
+            z=corr_matrix.values,
+            x=corr_matrix.columns,
+            y=corr_matrix.columns,
+            colorscale='RdBu',  # 赤青のカラースケール
+            zmin=-1, zmax=1
+        ))
+        
+        fig.update_layout(
+            title='各要素間の相関関係',
+            height=700,
+            width=700
+        )
+        
+        st.plotly_chart(fig)
+        
+        # 評価との相関が高い要素を表示
+        rating_corr = corr_matrix['rating'].drop('rating').sort_values(ascending=False)
+        
+        st.write("⭐ 評価と最も関連性が高い要素:")
+        for idx, (item, corr) in enumerate(rating_corr.head(5).items()):
+            direction = "正の" if corr > 0 else "負の"
+            strength = "強い" if abs(corr) > 0.5 else "やや"
+            st.write(f"{idx+1}. **{item}**: {strength}{direction}相関 ({corr:.2f})")
+
 # CSV形式でエクスポートする関数
 def export_to_csv(diary_data):
     df = pd.DataFrame(diary_data)
@@ -809,6 +951,9 @@ def main():
     
     elif menu == "📊 データ分析":
         show_statistics()
+      
+    elif menu == "📊 高度な可視化分析":
+        advanced_visualizations(df)
     
     elif menu == "⚙️ 設定・ヘルプ":
         st.header("⚙️ 設定・ヘルプ")
