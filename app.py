@@ -773,6 +773,8 @@ def show_statistics():
 
 def advanced_visualizations(df):
     st.subheader("🔍 高度な可視化分析")
+
+    df = load_diary()
     
     # データの前処理
     df['date'] = pd.to_datetime(df['date'])
@@ -953,8 +955,7 @@ def main():
         show_statistics()
       
     elif menu == "📊高度な可視化分析":
-        df = load_diary_data()  # データをロードする関数（例）
-        advanced_visualizations(df)
+        advanced_visualizations()
     
     elif menu == "⚙️ 設定・ヘルプ":
         st.header("⚙️ 設定・ヘルプ")
