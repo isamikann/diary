@@ -953,7 +953,7 @@ def main():
         show_statistics()
       
     elif menu == "📊高度な可視化分析":
-        advanced_visualizations(df)
+        advanced_visualizations()
     
     elif menu == "⚙️ 設定・ヘルプ":
         st.header("⚙️ 設定・ヘルプ")
