@@ -953,7 +953,8 @@ def main():
         show_statistics()
       
     elif menu == "📊高度な可視化分析":
-        advanced_visualizations()
+        df = load_diary_data()  # データをロードする関数（例）
+        advanced_visualizations(df)
     
     elif menu == "⚙️ 設定・ヘルプ":
         st.header("⚙️ 設定・ヘルプ")
