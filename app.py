@@ -785,7 +785,7 @@ def advanced_visualizations():
     df['month'] = df['date'].dt.month_name()
     
     # タブで分析項目を分ける
-    viz_tabs = st.tabs(["時系列ヒートマップ", "相関マトリックス", "活動ネットワーク"])
+    viz_tabs = st.tabs(["時系列ヒートマップ", "相関マトリックス"])
     
     # タブ1: 時系列ヒートマップ
     with viz_tabs[0]:
