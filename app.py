@@ -18,6 +18,14 @@ import requests
 # 日本語フォントの設定
 japanize_matplotlib.japanize()
 
+# ページセットアップ  
+st.set_page_config(  
+    page_title="分析日記アプリ",  
+    page_icon="📖",  
+    layout="wide",  
+    initial_sidebar_state="expanded",  
+)  
+
 # GitHub リポジトリ情報  
 GITHUB_REPO = "isamikann/diary"  
 GITHUB_FILE_PATH = "diary.json"  # JSON ファイルのパス  
@@ -88,6 +96,13 @@ def get_entry_by_date(date):
 def setup_page():  
     st.sidebar.title("📖 シンプル日記アプリ")  
     theme = st.sidebar.selectbox("🎨 テーマを選択", ["ライト", "ダーク", "カラフル", "シンプル"])  
+
+    # 共通のスタイル設定  
+    common_styles = """  
+    .diary-entry { padding: 15px; border-radius: 5px; margin-bottom: 10px; background-color: rgba(240, 240, 240, 0.3); border-left: 5px solid #4CAF50; }  
+    .rating-stars { color: gold; font-size: 20px; }  
+    .main-content { padding: 20px; }  
+    """  
   
     # テーマに基づいたスタイルを適用  
     if theme == "ダーク":  
@@ -140,6 +155,9 @@ def setup_page():
         """, unsafe_allow_html=True)  
   
     return theme  
+
+# スタイル適用
+theme = setup_page()
 
 # 📝 日記入力フォーム
 def diary_form():
@@ -1339,9 +1357,6 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded",
     )
-    
-    # スタイル適用
-    theme = setup_page()
     
     # サイドバーメニュー  
     st.sidebar.markdown("### 📅 メニュー")  
