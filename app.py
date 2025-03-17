@@ -410,243 +410,240 @@ def display_calendar(diary):
                     </div>
                     """, unsafe_allow_html=True)
 
-# 📊 基本統計データ可視化  
-def show_statistics():  
-    st.header("📊 データ分析")  
-      
-    diary = load_diary()  
-    if len(diary) == 0:  
-        st.info("まだデータがありません。")  
-        return  
-      
-    if len(diary) < 3:  
-        st.warning("統計分析には最低3件のデータが必要です。もう少し日記を書いてみましょう。")  
-        return  
-      
-    # DataFrame に変換  
-    df = pd.DataFrame(diary)  
-      
-    # 日付を日時型に変換  
-    df["date"] = pd.to_datetime(df["date"])  
-    df = df.sort_values("date")  
-      
-    # 曜日情報を追加  
-    df["weekday"] = df["date"].dt.day_name()  
-    # 日本語曜日に変換  
-    weekday_map = {  
-        "Monday": "月曜日", "Tuesday": "火曜日", "Wednesday": "水曜日",   
-        "Thursday": "木曜日", "Friday": "金曜日", "Saturday": "土曜日", "Sunday": "日曜日"  
-    }  
-    df["weekday_jp"] = df["weekday"].map(weekday_map)  
-      
-    # タブで分析項目を分ける  
-    tabs = st.tabs(["評価の推移", "天気と体調", "曜日と活動", "キーワード分析", "睡眠時間"])  
-      
-    # タブ1: 評価の推移  
-    with tabs[0]:  
-        st.subheader("評価の推移")  
-                  
-        # Plotlyでインタラクティブなグラフを作成  
-        fig = px.line(df, x="date", y="rating",  
-                      title="日々の評価の推移",  
-                      labels={"rating": "評価", "date": "日付"},  
-                      markers=True,  
-                      template="plotly_dark")  
-                  
-        # 7日間の移動平均を追加  
-        if len(df) >= 7:  
-            df["rolling_avg"] = df["rating"].rolling(window=7).mean()  
-            fig.add_scatter(x=df["date"], y=df["rolling_avg"], mode="lines", name="7日間移動平均")  
-                  
-        st.plotly_chart(fig, use_container_width=True)  
-                  
-        #評価を数える。  
-        rating_counts = df['rating'].value_counts().sort_index()  
-        #1~5でデータがない場合、０を追加する  
-        for i in range(1,6):  
-            if i not in rating_counts:  
-                rating_counts[i] = 0  
-        rating_counts = rating_counts.sort_index()  
-                  
-        fig = go.Figure(data=[go.Bar(x=rating_counts.index, y=rating_counts.values)])  
-        fig.update_layout(  
-            title='評価の分布',  
-            xaxis_title='評価',  
-            yaxis_title='日数',  
-            xaxis=dict(  
-                tickmode='linear',  
-                dtick=1,  
-                range=[0.5,5.5]  
-            ),  
-            yaxis=dict(  
-                tickmode='linear',  
-            ),  
-            template="plotly_dark"  # Plotlyのテーマを設定  
-        )  
-        st.plotly_chart(fig, use_container_width=True)  
-                  
-        # 評価の特徴  
-        st.subheader("評価の特徴")  
-        col1, col2, col3 = st.columns(3)  
-                  
-        with col1:  
-            st.metric("平均評価", f"{df['rating'].mean():.1f}")  
-        with col2:  
-            st.metric("最高評価の日数", len(df[df["rating"] == 5]))  
-        with col3:  
-            # 先週と今週の比較  
-            today = pd.Timestamp.today()  
-            last_week = df[(df["date"] >= today - timedelta(days=14)) & (df["date"] < today - timedelta(days=7))]  
-            this_week = df[(df["date"] >= today - timedelta(days=7)) & (df["date"] <= today)]  
-                          
-            if not last_week.empty and not this_week.empty:  
-                last_week_avg = last_week["rating"].mean()  
-                this_week_avg = this_week["rating"].mean()  
-                delta = this_week_avg - last_week_avg  
-                st.metric("先週比", f"{this_week_avg:.1f}", f"{delta:+.1f}")  
-            else:  
-                st.metric("先週比", "データ不足")  
-                  
-    # タブ2: 天気と体調  
-    with tabs[1]:  
-        st.subheader("天気と体調の影響")  
-                  
-        col1, col2 = st.columns(2)  
-                  
-        with col1:  
-            # 天気ごとの評価  
-            weather_avg = df.groupby("weather")["rating"].mean().sort_values(ascending=False)  
-            weather_count = df.groupby("weather").size()  
-                          
-            weather_fig = px.bar(  
-                x=weather_avg.index,   
-                y=weather_avg.values,  
-                title="天気別の平均評価",  
-                labels={"x": "天気", "y": "平均評価"},  
-                text=[f"({count}日)" for count in weather_count[weather_avg.index]],  
-                template="plotly_dark"  
-            )  
-            st.plotly_chart(weather_fig, use_container_width=True)  
-                          
-            # 最も評価が高い天気  
-            best_weather = weather_avg.idxmax()  
-            st.info(f"☀️ 評価が最も高い天気は「{best_weather}」です（平均{weather_avg.max():.1f}点）")  
-                  
-        with col2:  
-            # 体調ごとの評価  
-            health_avg = df.groupby("health")["rating"].mean().sort_values(ascending=False)  
-            health_count = df.groupby("health").size()  
-                          
-            health_fig = px.bar(  
-                x=health_avg.index,   
-                y=health_avg.values,  
-                title="体調別の平均評価",  
-                labels={"x": "体調", "y": "平均評価"},  
-                text=[f"({count}日)" for count in health_count[health_avg.index]],  
-                template="plotly_dark"  
-            )  
-            st.plotly_chart(health_fig, use_container_width=True)  
-                          
-            # 最も評価が高い体調  
-            best_health = health_avg.idxmax()  
-            st.info(f"💪 評価が最も高い体調は「{best_health}」です（平均{health_avg.max():.1f}点）")  
-                  
-        # 気分の分析（データがあれば）  
-        if "mood" in df.columns and df["mood"].notna().any() and (df["mood"] != "選択しない").any():  
-            st.subheader("気分の分析")  
-            mood_data = df[df["mood"] != "選択しない"]  
-                          
-            if not mood_data.empty:  
-                mood_avg = mood_data.groupby("mood")["rating"].mean().sort_values(ascending=False)  
-                mood_count = mood_data.groupby("mood").size()  
-                                  
-                mood_fig = px.bar(  
-                    x=mood_avg.index,   
-                    y=mood_avg.values,  
-                    title="気分別の平均評価",  
-                    labels={"x": "気分", "y": "平均評価"},  
-                    text=[f"({count}日)" for count in mood_count[mood_avg.index]],  
-                    template="plotly_dark"  
-                )  
-                st.plotly_chart(mood_fig, use_container_width=True)  
-                                  
-                best_mood = mood_avg.idxmax()  
+# 📊 基本統計データ可視化
+def show_statistics():
+    st.header("📊 データ分析")
+    
+    diary = load_diary()
+    if len(diary) == 0:
+        st.info("まだデータがありません。")
+        return
+    
+    if len(diary) < 3:
+        st.warning("統計分析には最低3件のデータが必要です。もう少し日記を書いてみましょう。")
+        return
+    
+    # DataFrame に変換
+    df = pd.DataFrame(diary)
+    
+    # 日付を日時型に変換
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date")
+    
+    # 曜日情報を追加
+    df["weekday"] = df["date"].dt.day_name()
+    # 日本語曜日に変換
+    weekday_map = {
+        "Monday": "月曜日", "Tuesday": "火曜日", "Wednesday": "水曜日", 
+        "Thursday": "木曜日", "Friday": "金曜日", "Saturday": "土曜日", "Sunday": "日曜日"
+    }
+    df["weekday_jp"] = df["weekday"].map(weekday_map)
+    
+    # タブで分析項目を分ける
+    tabs = st.tabs(["評価の推移", "天気と体調", "曜日と活動", "キーワード分析", "睡眠時間"])
+    
+    # タブ1: 評価の推移
+    with tabs[0]:
+        st.subheader("評価の推移")
+        
+        # Plotlyでインタラクティブなグラフを作成
+        fig = px.line(df, x="date", y="rating", 
+                    title="日々の評価の推移",
+                    labels={"rating": "評価", "date": "日付"},
+                    markers=True)
+        
+        # 7日間の移動平均を追加
+        if len(df) >= 7:
+            df["rolling_avg"] = df["rating"].rolling(window=7).mean()
+            fig.add_scatter(x=df["date"], y=df["rolling_avg"], mode="lines", name="7日間移動平均")
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        #評価を数える。
+        rating_counts = df['rating'].value_counts().sort_index()
+        #1~5でデータがない場合、０を追加する
+        for i in range(1,6):
+            if i not in rating_counts:
+                rating_counts[i] = 0
+        rating_counts = rating_counts.sort_index()
+        
+        fig = go.Figure(data=[go.Bar(x=rating_counts.index, y=rating_counts.values)])
+
+        fig.update_layout(
+            title='評価の分布',
+            xaxis_title='評価',
+            yaxis_title='日数',
+            xaxis=dict(
+                tickmode='linear',
+                dtick=1,
+                range=[0.5,5.5]
+            ),
+            yaxis=dict(
+                tickmode='linear',
+            )
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # 評価の特徴
+        st.subheader("評価の特徴")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("平均評価", f"{df['rating'].mean():.1f}")
+        with col2:
+            st.metric("最高評価の日数", len(df[df["rating"] == 5]))
+        with col3:
+            # 先週と今週の比較
+            today = pd.Timestamp.today()
+            last_week = df[(df["date"] >= today - timedelta(days=14)) & (df["date"] < today - timedelta(days=7))]
+            this_week = df[(df["date"] >= today - timedelta(days=7)) & (df["date"] <= today)]
+            
+            if not last_week.empty and not this_week.empty:
+                last_week_avg = last_week["rating"].mean()
+                this_week_avg = this_week["rating"].mean()
+                delta = this_week_avg - last_week_avg
+                st.metric("先週比", f"{this_week_avg:.1f}", f"{delta:+.1f}")
+            else:
+                st.metric("先週比", "データ不足")
+    
+    # タブ2: 天気と体調
+    with tabs[1]:
+        st.subheader("天気と体調の影響")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # 天気ごとの評価
+            weather_avg = df.groupby("weather")["rating"].mean().sort_values(ascending=False)
+            weather_count = df.groupby("weather").size()
+            
+            weather_fig = px.bar(
+                x=weather_avg.index, 
+                y=weather_avg.values,
+                title="天気別の平均評価",
+                labels={"x": "天気", "y": "平均評価"},
+                text=[f"({count}日)" for count in weather_count[weather_avg.index]]
+            )
+            st.plotly_chart(weather_fig, use_container_width=True)
+            
+            # 最も評価が高い天気
+            best_weather = weather_avg.idxmax()
+            st.info(f"☀️ 評価が最も高い天気は「{best_weather}」です（平均{weather_avg.max():.1f}点）")
+        
+        with col2:
+            # 体調ごとの評価
+            health_avg = df.groupby("health")["rating"].mean().sort_values(ascending=False)
+            health_count = df.groupby("health").size()
+            
+            health_fig = px.bar(
+                x=health_avg.index, 
+                y=health_avg.values,
+                title="体調別の平均評価",
+                labels={"x": "体調", "y": "平均評価"},
+                text=[f"({count}日)" for count in health_count[health_avg.index]]
+            )
+            st.plotly_chart(health_fig, use_container_width=True)
+            
+            # 最も評価が高い体調
+            best_health = health_avg.idxmax()
+            st.info(f"💪 評価が最も高い体調は「{best_health}」です（平均{health_avg.max():.1f}点）")
+        
+        # 気分の分析（データがあれば）
+        if "mood" in df.columns and df["mood"].notna().any() and (df["mood"] != "選択しない").any():
+            st.subheader("気分の分析")
+            mood_data = df[df["mood"] != "選択しない"]
+            
+            if not mood_data.empty:
+                mood_avg = mood_data.groupby("mood")["rating"].mean().sort_values(ascending=False)
+                mood_count = mood_data.groupby("mood").size()
+                
+                mood_fig = px.bar(
+                    x=mood_avg.index, 
+                    y=mood_avg.values,
+                    title="気分別の平均評価",
+                    labels={"x": "気分", "y": "平均評価"},
+                    text=[f"({count}日)" for count in mood_count[mood_avg.index]]
+                )
+                st.plotly_chart(mood_fig, use_container_width=True)
+                
+                best_mood = mood_avg.idxmax()
                 st.info(f"🧠 評価が最も高い気分は「{best_mood}」です（平均{mood_avg.max():.1f}点）")
     
-    # タブ3: 曜日と活動  
-    with tabs[2]:  
-        st.subheader("曜日別の評価と活動")  
-          
-        col1, col2 = st.columns(2)  
-          
-        with col1:  
-            # 曜日別の評価  
-            weekday_order = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日"]  
-            weekday_avg = df.groupby("weekday_jp")["rating"].mean().reindex(weekday_order)  
-              
-            weekday_fig = px.bar(  
-                x=weekday_avg.index,  
-                y=weekday_avg.values,  
-                title="曜日別の平均評価",  
-                labels={"x": "曜日", "y": "平均評価"},  
-                template="plotly_dark"  
-            )  
-            st.plotly_chart(weekday_fig, use_container_width=True)  
-              
-            # 最も評価が高い曜日  
-            best_weekday = weekday_avg.idxmax()  
-            st.info(f"📅 評価が最も高い曜日は「{best_weekday}」です（平均{weekday_avg.max():.1f}点）")  
-          
-        with col2:  
-            # 活動の分析  
-            st.subheader("活動と評価の関係")  
-              
-            # 活動データが存在する場合  
-            if "activities" in df.columns:  
-                all_activities = []  
-                for acts in df["activities"]:  
-                    if isinstance(acts, list):  
-                        all_activities.extend(acts)  
-                  
-                # 活動ごとの集計  
-                activity_data = {}  
-                for activity in set(all_activities):  
-                    days_with_activity = df[df["activities"].apply(lambda x: activity in x if isinstance(x, list) else False)]  
-                    if not days_with_activity.empty:  
-                        avg_rating = days_with_activity["rating"].mean()  
-                        activity_data[activity] = {  
-                            "average": avg_rating,  
-                            "count": len(days_with_activity)  
-                        }  
-                  
-                # データを表示用に整形  
-                if activity_data:  
-                    activities_df = pd.DataFrame([  
-                        {"活動": activity, "平均評価": data["average"], "日数": data["count"]}  
-                        for activity, data in activity_data.items()  
-                    ]).sort_values("平均評価", ascending=False)  
-                      
-                    activity_fig = px.bar(  
-                        activities_df,  
-                        x="活動",  
-                        y="平均評価",  
-                        title="活動別の平均評価",  
-                        text=activities_df["日数"].apply(lambda x: f"({x}日)"),  
-                        template="plotly_dark"  
-                    )  
-                    st.plotly_chart(activity_fig, use_container_width=True)  
-                      
-                    # トップ3の活動  
-                    if len(activities_df) >= 3:  
-                        st.success("⭐ 評価が高い活動トップ3:")  
-                        for i, (_, row) in enumerate(activities_df.head(3).iterrows()):  
-                            st.write(f"{i+1}. **{row['活動']}** (平均{row['平均評価']:.1f}点, {row['日数']}日)")  
-                    elif len(activities_df) > 0:  
-                        st.success(f"⭐ 評価が最も高い活動は「{activities_df.iloc[0]['活動']}」です")  
-                else:  
-                    st.info("活動データがまだ十分にありません。")  
-            else:  
-                st.info("活動データが記録されていません。")  
+    # タブ3: 曜日と活動
+    with tabs[2]:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("曜日別の評価")
+            
+            # 曜日順に並べ替え
+            weekday_order = ["月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日"]
+            weekday_avg = df.groupby("weekday_jp")["rating"].mean()
+            weekday_avg = weekday_avg.reindex(weekday_order)
+            
+            weekday_fig = px.bar(
+                x=weekday_avg.index, 
+                y=weekday_avg.values,
+                title="曜日別の平均評価",
+                labels={"x": "曜日", "y": "平均評価"}
+            )
+            st.plotly_chart(weekday_fig, use_container_width=True)
+            
+            # 最も評価が高い曜日
+            best_weekday = weekday_avg.idxmax()
+            st.info(f"📅 評価が最も高い曜日は「{best_weekday}」です（平均{weekday_avg.max():.1f}点）")
+        
+        with col2:
+            # 活動の分析
+            st.subheader("活動と評価の関係")
+            
+            # 活動データが存在する場合
+            if "activities" in df.columns:
+                # 全活動リストを作成
+                all_activities = []
+                for acts in df["activities"]:
+                    if isinstance(acts, list):
+                        all_activities.extend(acts)
+                
+                # 活動ごとの集計
+                activity_data = {}
+                for activity in set(all_activities):
+                    # その活動がある日のみ抽出
+                    days_with_activity = df[df["activities"].apply(lambda x: activity in x if isinstance(x, list) else False)]
+                    if not days_with_activity.empty:
+                        avg_rating = days_with_activity["rating"].mean()
+                        activity_data[activity] = {
+                            "average": avg_rating,
+                            "count": len(days_with_activity)
+                        }
+                
+                # データを表示用に整形
+                if activity_data:
+                    activities_df = pd.DataFrame([
+                        {"活動": activity, "平均評価": data["average"], "日数": data["count"]}
+                        for activity, data in activity_data.items()
+                    ]).sort_values("平均評価", ascending=False)
+                    
+                    activity_fig = px.bar(
+                        activities_df,
+                        x="活動", 
+                        y="平均評価",
+                        title="活動別の平均評価",
+                        text=activities_df["日数"].apply(lambda x: f"({x}日)")
+                    )
+                    st.plotly_chart(activity_fig, use_container_width=True)
+                    
+                    # トップ3の活動
+                    if len(activities_df) >= 3:
+                        st.success("⭐ 評価が高い活動トップ3:")
+                        for i, (_, row) in enumerate(activities_df.head(3).iterrows()):
+                            st.write(f"{i+1}. **{row['活動']}** (平均{row['平均評価']:.1f}点, {row['日数']}日)")
+                    elif len(activities_df) > 0:
+                        st.success(f"⭐ 評価が最も高い活動は「{activities_df.iloc[0]['活動']}」です")
+                else:
+                    st.info("活動データがまだ十分にありません。")
+            else:
+                st.info("活動データが記録されていません。")
     
     # タブ4: キーワード分析
     with tabs[3]:
@@ -671,118 +668,130 @@ def show_statistics():
                                   "なのに", "だけど", "たり", "だ", "だが", "そして", "しかし", "だから", "また", "につい",  
                                   "すると", "なるほど", "ほんの", "たい", "です", "ます", "する", "くる", "れる"]  
             
-      # 形態素解析で分かち書き  
-            for token in t.tokenize(all_text):  
-                part_of_speech = token.part_of_speech.split(',')[0]  
-                base_form = token.base_form  
-                  
-                # 名詞、動詞、形容詞のみを抽出  
-                if part_of_speech in ['名詞', '動詞', '形容詞'] and base_form not in japanese_stopwords:  
-                    wakati_text.append(base_form)  
+            # 形態素解析で分かち書き
+            for token in t.tokenize(all_text):
+                # 品詞の取得
+                part_of_speech = token.part_of_speech.split(',')[0]
+                # 基本形の取得
+                base_form = token.base_form
+                
+                # 名詞、動詞、形容詞のみを抽出
+                if part_of_speech in ['名詞', '動詞', '形容詞'] and base_form not in japanese_stopwords:
+                    # 除外したい単語以外を追加
+                    wakati_text.append(base_form)
+            
+            # 分かち書きされたテキストを一つの文字列にする
+            wakati_all_text = " ".join(wakati_text)
+            
+            if wakati_all_text.strip():  # 分かち書き後のテキストが空でないか確認
               
-            # 分かち書きされたテキストを一つの文字列にする  
-            wakati_all_text = " ".join(wakati_text)  
-              
-            if wakati_all_text.strip():  
-                # ワードクラウドの作成  
-                st.write("📝 よく使われる単語のワードクラウド")  
-                wordcloud = WordCloud(  
-                    width=800,   
-                    height=400,   
-                    background_color='white',  
-                    font_path='./ipaexg.ttf',  # 日本語フォントのファイル名を指定  
-                    stopwords=set(japanese_stopwords),  
-                    collocations=False,  
-                    max_words=100  
-                ).generate(wakati_all_text)  
-                  
-                # ワードクラウドの表示  
-                fig, ax = plt.subplots(figsize=(10, 5))  
-                ax.imshow(wordcloud, interpolation='bilinear')  
-                ax.axis("off")  
-                st.pyplot(fig)  
-                  
-                # 頻出キーワードの分析  
-                st.write("📊 感情ごとの評価平均")  
-                  
-                # 感情キーワードのマッピング  
-                emotion_keywords = {  
-                    "ポジティブ": ["嬉しい", "楽しい", "幸せ", "わくわく", "最高", "喜び", "素晴らしい", "良い", "成功", "達成"],  
-                    "ネガティブ": ["悲しい", "辛い", "苦しい", "不安", "心配", "失敗", "残念", "怖い", "疲れる", "しんどい"],  
-                    "中立/その他": ["考える", "思う", "感じる", "予定", "明日", "今日", "昨日", "たぶん", "かもしれない"]  
-                }  
-                  
-                emotion_ratings = {emotion: [] for emotion in emotion_keywords}  
-                  
-                for _, row in df.iterrows():  
-                    wakati_content = [token.base_form for token in t.tokenize(row["content"]) if token.part_of_speech.split(',')[0] in ['名詞', '動詞', '形容詞']]  
-                    rating = row["rating"]  
-                      
-                    for emotion, keywords in emotion_keywords.items():  
-                        if any(keyword in wakati_content for keyword in keywords):  
-                            emotion_ratings[emotion].append(rating)  
-                  
-                emotion_avg = {emotion: np.mean(ratings) if ratings else 0 for emotion, ratings in emotion_ratings.items()}  
-                emotion_count = {emotion: len(ratings) for emotion, ratings in emotion_ratings.items()}  
-                  
-                fig = px.bar(  
-                    x=list(emotion_avg.keys()),  
-                    y=list(emotion_avg.values()),  
-                    title="感情表現ごとの平均評価",  
-                    labels={"x": "感情カテゴリ", "y": "平均評価"},  
-                    text=[f"({count}日)" for count in emotion_count.values()],  
-                    template="plotly_dark"  
-                )  
-                st.plotly_chart(fig, use_container_width=True)  
-                  
-                if any(emotion_avg.values()):  
-                    best_emotion = max(emotion_avg.items(), key=lambda x: x[1])  
-                    if best_emotion[1] > 0:  
-                        st.info(f"💭 「{best_emotion[0]}」な表現をした日の平均評価が最も高いです（平均{best_emotion[1]:.1f}点）")  
-            else:  
-                st.info("単語抽出できませんでした")  
-        else:  
-            st.info("テキストデータがまだ十分にありません。")  
-      
-    # タブ5: 睡眠時間  
-    with tabs[4]:  
-        st.subheader("睡眠時間と評価の関係")  
-          
-        # 睡眠時間と評価の散布図  
-        sleep_rating_scatter = px.scatter(  
-            df,   
-            x="sleep_hours",   
-            y="rating",   
-            title="睡眠時間と評価の関係",  
-            labels={"sleep_hours": "睡眠時間（時間）", "rating": "評価"},  
-            template="plotly_dark"  
-        )  
-        st.plotly_chart(sleep_rating_scatter, use_container_width=True)  
-          
-        # 睡眠時間と評価の相関係数  
-        correlation = df["sleep_hours"].corr(df["rating"])  
-        st.write(f"睡眠時間と評価の相関係数：{correlation:.2f}")  
-          
-        # 睡眠時間ごとの平均評価  
-        sleep_avg = df.groupby("sleep_hours")["rating"].mean().sort_index()  
-        sleep_avg_fig = px.bar(  
-            x=sleep_avg.index,   
-            y=sleep_avg.values,  
-            title="睡眠時間別の平均評価",  
-            labels={"x": "睡眠時間（時間）", "y": "平均評価"},  
-            template="plotly_dark"  
-        )  
-        st.plotly_chart(sleep_avg_fig, use_container_width=True)  
-          
-        if correlation > 0.5:  
-            st.info(f"相関係数{correlation:.2f}:睡眠時間が長いほど評価が高い傾向があります。")  
-        elif correlation < -0.5:  
-            st.info(f"相関係数{correlation:.2f}:睡眠時間が長いほど評価が低い傾向があります。")  
-        else:  
-            st.info(f"相関係数{correlation:.2f}:睡眠時間と評価に関連はあまりないようです。")  
-          
-        best_sleep_hours = sleep_avg.idxmax()  
-        st.info(f"🛌 評価が最も高い睡眠時間は「{best_sleep_hours}時間」です（平均{sleep_avg.max():.1f}点）")  
+                # ワードクラウドの作成
+                st.write("📝 よく使われる単語のワードクラウド")
+                
+                # 変更後
+                wordcloud = WordCloud(
+                    width=800, 
+                    height=400, 
+                    background_color='white',
+                    font_path='./ipaexg.ttf',  # 日本語フォントのファイル名を指定
+                    stopwords=set(japanese_stopwords), # ここではストップワードは不要のため空リストにしない
+                    collocations=False,
+                    max_words=100
+                ).generate(wakati_all_text)
+
+                # ワードクラウドの表示
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ax.imshow(wordcloud, interpolation='bilinear')
+                ax.axis("off")
+                st.pyplot(fig)
+                
+                # 頻出キーワードの分析
+                st.write("📊 感情ごとの評価平均")
+                
+                # 感情キーワードのマッピング
+                emotion_keywords = {
+                    "ポジティブ": ["嬉しい", "楽しい", "幸せ", "わくわく", "最高", "喜び", "素晴らしい", "良い", "成功", "達成"],
+                    "ネガティブ": ["悲しい", "辛い", "苦しい", "不安", "心配", "失敗", "残念", "怖い", "疲れる", "しんどい"],
+                    "中立/その他": ["考える", "思う", "感じる", "予定", "明日", "今日", "昨日", "たぶん", "かもしれない"]
+                }
+                
+                # 感情ごとのデータ収集
+                emotion_ratings = {emotion: [] for emotion in emotion_keywords}
+                
+                for _, row in df.iterrows():
+                    # 感情キーワードチェックのテキスト変更
+                    wakati_content = [token.base_form for token in t.tokenize(row["content"]) if token.part_of_speech.split(',')[0] in ['名詞', '動詞', '形容詞']]
+                    rating = row["rating"]
+                    
+                    for emotion, keywords in emotion_keywords.items():
+                         if any(keyword in wakati_content for keyword in keywords):
+                             emotion_ratings[emotion].append(rating)
+                
+                # 感情ごとの平均評価を計算
+                emotion_avg = {emotion: np.mean(ratings) if ratings else 0 for emotion, ratings in emotion_ratings.items()}
+                emotion_count = {emotion: len(ratings) for emotion, ratings in emotion_ratings.items()}
+                
+                # 感情ごとの平均評価をグラフ化
+                fig = px.bar(
+                    x=list(emotion_avg.keys()),
+                    y=list(emotion_avg.values()),
+                    title="感情表現ごとの平均評価",
+                    labels={"x": "感情カテゴリ", "y": "平均評価"},
+                    text=[f"({count}日)" for count in emotion_count.values()]
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # 最も評価が高い感情カテゴリ
+                if any(emotion_avg.values()):
+                    best_emotion = max(emotion_avg.items(), key=lambda x: x[1])
+                    if best_emotion[1] > 0:
+                        st.info(f"💭 「{best_emotion[0]}」な表現をした日の平均評価が最も高いです（平均{best_emotion[1]:.1f}点）")
+            else:
+                st.info("単語抽出できませんでした")
+        else:
+            st.info("テキストデータがまだ十分にありません。")
+
+    # タブ5: 睡眠時間
+    with tabs[4]:
+        st.subheader("睡眠時間と評価の関係")
+
+        # 睡眠時間と評価の散布図
+        sleep_rating_scatter = px.scatter(
+            df, 
+            x="sleep_hours", 
+            y="rating", 
+            title="睡眠時間と評価の関係",
+            labels={"sleep_hours": "睡眠時間（時間）", "rating": "評価"}
+        )
+        st.plotly_chart(sleep_rating_scatter, use_container_width=True)
+        
+        # 睡眠時間と評価の相関係数
+        correlation = df["sleep_hours"].corr(df["rating"])
+        st.write(f"睡眠時間と評価の相関係数：{correlation:.2f}")
+
+        # 睡眠時間ごとの平均評価
+        sleep_avg = df.groupby("sleep_hours")["rating"].mean().sort_index()
+
+        sleep_avg_fig = px.bar(
+            x=sleep_avg.index, 
+            y=sleep_avg.values,
+            title="睡眠時間別の平均評価",
+            labels={"x": "睡眠時間（時間）", "y": "平均評価"}
+        )
+
+        st.plotly_chart(sleep_avg_fig, use_container_width=True)
+
+        # 睡眠時間と評価の分析情報
+        if correlation > 0.5:
+          st.info(f"相関係数{correlation:.2f}:睡眠時間が長いほど評価が高い傾向があります。")
+        elif correlation < -0.5:
+          st.info(f"相関係数{correlation:.2f}:睡眠時間が長いほど評価が低い傾向があります。")
+        else:
+          st.info(f"相関係数{correlation:.2f}:睡眠時間と評価に関連はあまりないようです。")
+
+        # 最も評価が高い睡眠時間
+        best_sleep_hours = sleep_avg.idxmax()
+        st.info(f"🛌 評価が最も高い睡眠時間は「{best_sleep_hours}時間」です（平均{sleep_avg.max():.1f}点）")
 
 def advanced_visualizations():
     st.subheader("🔍 高度な可視化分析")
