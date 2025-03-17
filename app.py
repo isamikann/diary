@@ -1354,7 +1354,7 @@ def main():
     elif menu == "📈 週間サマリー":
         weekly_summary_report()
       
-    elif menu == "🔍高度な可視化分析":
+    elif menu == "🔍 高度な可視化分析":
         advanced_visualizations()
     
     elif menu == "⚙️ 設定・ヘルプ":
