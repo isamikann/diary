@@ -15,9 +15,6 @@ from janome.tokenizer import Tokenizer
 import plotly.graph_objects as go
 import requests
 
-# 日本語フォントの設定
-japanize_matplotlib.japanize()
-
 # ページセットアップ  
 st.set_page_config(  
     page_title="分析日記アプリ",  
@@ -25,6 +22,9 @@ st.set_page_config(
     layout="wide",  
     initial_sidebar_state="expanded",  
 )  
+
+# 日本語フォントの設定
+japanize_matplotlib.japanize()
 
 # GitHub リポジトリ情報  
 GITHUB_REPO = "isamikann/diary"  
