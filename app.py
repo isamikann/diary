@@ -930,6 +930,161 @@ def export_to_csv(diary_data):
     df = df[["date", "content", "weather", "health", "rating", "activities", "mood", "memo", "sleep_hours"]]
     return df.to_csv(index=False).encode('utf-8-sig')  # 日本語のためにUTF-8 with BOMを使用
 
+
+# 習慣化支援（連続記録表示）機能
+def habit_tracking():
+    st.header("📊 習慣化支援・連続記録")
+    
+    diary = load_diary()
+    if len(diary) == 0:
+        st.info("まだ日記データがありません。")
+        return
+    
+    # DataFrameに変換
+    df = pd.DataFrame(diary)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date")
+    
+    # 日付範囲を取得
+    min_date = df["date"].min()
+    max_date = df["date"].max()
+    date_range = pd.date_range(start=min_date, end=max_date)
+    
+    # 連続記録の計算
+    st.subheader("🔄 連続記録状況")
+    
+    # 現在の連続記録を計算
+    current_streak = 0
+    last_date = datetime.now().date()
+    
+    # 日付順にソート
+    sorted_dates = sorted([pd.to_datetime(d["date"]).date() for d in diary], reverse=True)
+    
+    for i, date in enumerate(sorted_dates):
+        if i == 0:
+            current_streak = 1
+        else:
+            prev_date = sorted_dates[i-1]
+            if (prev_date - date).days == 1:  # 連続している
+                current_streak += 1
+            else:
+                break
+    
+    # 最長連続記録を計算
+    all_dates = sorted([pd.to_datetime(d["date"]).date() for d in diary])
+    longest_streak = 1
+    current = 1
+    
+    for i in range(1, len(all_dates)):
+        if (all_dates[i] - all_dates[i-1]).days == 1:
+            current += 1
+        else:
+            longest_streak = max(longest_streak, current)
+            current = 1
+    
+    longest_streak = max(longest_streak, current)
+    
+    # メトリクス表示
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("現在の連続記録", f"{current_streak}日")
+    
+    with col2:
+        st.metric("最長連続記録", f"{longest_streak}日")
+    
+    with col3:
+        completion_rate = int(len(df) / len(date_range) * 100)
+        st.metric("記録率", f"{completion_rate}%")
+    
+    # カレンダーヒートマップ表示
+    st.subheader("📅 記録カレンダー")
+    
+    # 月を選択
+    current_month = datetime.now().strftime("%Y-%m")
+    all_months = sorted(df["date"].dt.strftime("%Y-%m").unique())
+    
+    if current_month in all_months:
+        default_index = all_months.index(current_month)
+    else:
+        default_index = len(all_months) - 1 if all_months else 0
+    
+    selected_month = st.selectbox(
+        "月を選択", 
+        all_months if all_months else [current_month], 
+        index=min(default_index, len(all_months)-1) if all_months else 0,
+        format_func=lambda x: f"{x[:4]}年{x[5:]}月"
+    )
+    
+    # 連続記録のカレンダー表示
+    if all_months:
+        year, month = map(int, selected_month.split('-'))
+        cal = calendar.monthcalendar(year, int(month))
+        
+        # 月のデータを抽出
+        month_data = df[df["date"].dt.strftime("%Y-%m") == selected_month]
+        month_dates = set(month_data["date"].dt.strftime("%Y-%m-%d"))
+        
+        # カレンダーヘッダー
+        cols = st.columns(7)
+        days = ["月", "火", "水", "木", "金", "土", "日"]
+        for i, day in enumerate(days):
+            cols[i].markdown(f"<p style='text-align: center; font-weight: bold;'>{day}</p>", unsafe_allow_html=True)
+        
+        # カレンダー本体を表示
+        for week in cal:
+            cols = st.columns(7)
+            for i, day in enumerate(week):
+                if day == 0:
+                    # 当月ではない日
+                    cols[i].markdown("<p style='text-align: center;'></p>", unsafe_allow_html=True)
+                else:
+                    # 日付をフォーマット
+                    date_str = f"{year}-{month:02d}-{day:02d}"
+                    
+                    # 記録があるかチェック
+                    has_entry = date_str in month_dates
+                    
+                    # 今日の日付かチェック
+                    is_today = date_str == datetime.now().strftime("%Y-%m-%d")
+                    
+                    # 背景色決定
+                    if has_entry and is_today:
+                        bg_color = "rgba(255, 215, 0, 0.6)"  # 金色 (今日かつ記録あり)
+                        icon = "✅"
+                    elif has_entry:
+                        bg_color = "rgba(144, 238, 144, 0.6)"  # 緑 (記録あり)
+                        icon = "✅"
+                    elif is_today:
+                        bg_color = "rgba(255, 182, 193, 0.3)"  # ピンク (今日)
+                        icon = "📝"
+                    else:
+                        bg_color = "rgba(211, 211, 211, 0.2)"  # 灰色 (記録なし)
+                        icon = ""
+                    
+                    cols[i].markdown(f"""
+                    <div style='text-align: center; padding: 5px; background-color: {bg_color}; border-radius: 5px;'>
+                        <p style='font-weight: {"bold" if is_today else "normal"}; margin-bottom: 2px;'>{day}</p>
+                        <p style='margin: 0;'>{icon}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+    
+    # 習慣化のヒントとアドバイス
+    with st.expander("💡 習慣化のヒントとアドバイス"):
+        st.markdown("""
+        ### 日記を習慣化するためのヒント
+        
+        1. **同じ時間に書く**: 毎日決まった時間（朝や就寝前など）に日記を書く習慣をつけましょう。
+        2. **小さく始める**: 最初は1〜2行でもOK。続けることが大切です。
+        3. **場所を決める**: 日記を書く専用の場所を決めておくと、その場所に行くだけで書く習慣が身につきます。
+        4. **アラームを設定**: 日記を書く時間にスマートフォンのアラームを設定しましょう。
+        5. **ご褒美システム**: 連続記録を達成したら自分へのご褒美を用意しましょう。
+        6. **可視化する**: カレンダーに記録をつけて、視覚的に確認できるようにしましょう。
+        7. **内容より継続**: 内容の質より、まず継続することを重視しましょう。
+        
+        最初の30日間が最も重要です。この期間を乗り越えると習慣化されやすくなります！
+        """)
+
 # メイン関数
 def main():
     # ページの設定
@@ -954,6 +1109,9 @@ def main():
     
     elif menu == "📅 過去の日記":
         display_entries()
+
+    elif menu == "📊 習慣化支援・連続記録":
+        habit_tracking()
     
     elif menu == "📊 データ分析":
         show_statistics()
