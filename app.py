@@ -1085,6 +1085,248 @@ def habit_tracking():
         最初の30日間が最も重要です。この期間を乗り越えると習慣化されやすくなります！
         """)
 
+# 📊 週間サマリーレポート機能
+def weekly_summary_report():
+    st.header("📈 週間サマリーレポート")
+    
+    diary = load_diary()
+    if len(diary) == 0:
+        st.info("まだ日記データがありません。")
+        return
+    
+    # DataFrameに変換
+    df = pd.DataFrame(diary)
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date")
+    
+    # 週の選択
+    # 利用可能な週を計算
+    df['week_start'] = df['date'].dt.to_period('W').dt.start_time
+    df['week_end'] = df['date'].dt.to_period('W').dt.end_time
+    df['week_label'] = df['week_start'].dt.strftime('%Y/%m/%d') + ' - ' + df['week_end'].dt.strftime('%Y/%m/%d')
+    
+    available_weeks = sorted(df['week_label'].unique(), reverse=True)
+    
+    if not available_weeks:
+        st.warning("週ごとのデータがありません。")
+        return
+    
+    selected_week = st.selectbox("週を選択", available_weeks)
+    
+    # 選択された週の開始日と終了日
+    week_range = selected_week.split(' - ')
+    start_date = pd.to_datetime(week_range[0])
+    end_date = pd.to_datetime(week_range[1])
+    
+    # その週のデータを取得
+    week_data = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+    
+    if week_data.empty:
+        st.warning("選択された週のデータがありません。")
+        return
+    
+    # 1. 基本統計情報
+    st.subheader("📊 基本統計")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        entry_count = len(week_data)
+        max_count = 7  # 1週間の最大日数
+        completion_rate = int((entry_count / max_count) * 100)
+        st.metric("記録日数", f"{entry_count}/{max_count}日")
+    
+    with col2:
+        avg_rating = week_data['rating'].mean()
+        st.metric("平均評価", f"{avg_rating:.1f}点")
+    
+    with col3:
+        # 前週との比較
+        prev_week_start = start_date - timedelta(days=7)
+        prev_week_end = end_date - timedelta(days=7)
+        prev_week_data = df[(df['date'] >= prev_week_start) & (df['date'] <= prev_week_end)]
+        
+        if not prev_week_data.empty:
+            prev_avg_rating = prev_week_data['rating'].mean()
+            delta = avg_rating - prev_avg_rating
+            st.metric("前週比", f"{avg_rating:.1f}", f"{delta:+.1f}")
+        else:
+            st.metric("前週比", "データなし")
+    
+    with col4:
+        if 'sleep_hours' in week_data.columns:
+            avg_sleep = week_data['sleep_hours'].mean()
+            st.metric("平均睡眠時間", f"{avg_sleep:.1f}時間")
+        else:
+            st.metric("平均睡眠時間", "データなし")
+    
+    # 2. 気分と体調の分布
+    st.subheader("😊 気分・体調の分布")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if 'health' in week_data.columns:
+            health_counts = week_data['health'].value_counts()
+            fig = px.pie(names=health_counts.index, values=health_counts.values, title="体調の分布")
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        if 'mood' in week_data.columns and (week_data['mood'] != '選択しない').any():
+            mood_data = week_data[week_data['mood'] != '選択しない']
+            if not mood_data.empty:
+                mood_counts = mood_data['mood'].value_counts()
+                fig = px.pie(names=mood_counts.index, values=mood_counts.values, title="気分の分布")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("気分のデータがありません。")
+        else:
+            st.info("気分のデータがありません。")
+    
+    # 3. 活動の集計
+    st.subheader("🏃‍♂️ 活動の集計")
+    
+    if 'activities' in week_data.columns:
+        # すべての活動リスト
+        all_activities = []
+        for acts in week_data['activities']:
+            if isinstance(acts, list):
+                all_activities.extend(acts)
+        
+        if all_activities:
+            activity_counts = pd.Series(all_activities).value_counts()
+            fig = px.bar(
+                x=activity_counts.index, 
+                y=activity_counts.values, 
+                title="実施した活動",
+                labels={"x": "活動内容", "y": "回数"}
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # 最も多く行った活動
+            most_common = activity_counts.idxmax()
+            st.success(f"💪 今週最も多く行った活動は「{most_common}」です（{activity_counts.max()}回）")
+        else:
+            st.info("活動データがありません。")
+    else:
+        st.info("活動データがありません。")
+    
+    # 4. 日々の評価の推移
+    st.subheader("📈 評価の推移")
+    
+    # 日付でソート
+    week_data_sorted = week_data.sort_values('date')
+    fig = px.line(
+        week_data_sorted, 
+        x='date', 
+        y='rating',
+        title="日々の評価の推移",
+        labels={"rating": "評価", "date": "日付"},
+        markers=True
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # 5. 重要な出来事のハイライト
+    st.subheader("✨ 週のハイライト")
+    
+    # 最高評価の日
+    if not week_data.empty:
+        best_day = week_data.loc[week_data['rating'].idxmax()]
+        
+        st.markdown(f"""
+        ### 今週のベストデー: {best_day['date'].strftime('%Y/%m/%d')} ({best_day.get('rating', 'N/A')}点)
+        
+        **天気**: {best_day.get('weather', 'N/A')}  
+        **体調**: {best_day.get('health', 'N/A')}
+        
+        **活動**: {', '.join(best_day.get('activities', [])) if isinstance(best_day.get('activities', []), list) else 'なし'}
+        
+        **記録内容**:  
+        {best_day.get('content', '')}
+        """)
+    
+    # 6. キーワード分析
+    st.subheader("🔍 頻出キーワード")
+    
+    # テキストデータを結合
+    all_text = " ".join(week_data["content"].astype(str).tolist())
+    
+    if all_text.strip():
+        # Janome の Tokenizer を作成
+        t = Tokenizer()
+        
+        # 分かち書きされたテキストを格納するリスト
+        wakati_text = []
+        
+        # ストップワード（除外したい単語）を定義
+        japanese_stopwords = ["てる", "いる", "なる", "れる", "する", "ある", "こと", "これ", "さん", "して", 
+                            "くれる", "やる", "くる", "しまう", "いく", "ない", "のだ", "よう", "あり", "ため", 
+                            "ところ", "ます", "です", "から", "まで", "たり", "けど", "ので", "たい", "なる", 
+                            "もの", "それ", "その", "今日", "の", "られる", "日"]
+        
+        # 形態素解析で分かち書き
+        for token in t.tokenize(all_text):
+            # 品詞の取得
+            part_of_speech = token.part_of_speech.split(',')[0]
+            # 基本形の取得
+            base_form = token.base_form
+            
+            # 名詞、動詞、形容詞のみを抽出
+            if part_of_speech in ['名詞', '動詞', '形容詞'] and base_form not in japanese_stopwords:
+                # 除外したい単語以外を追加
+                wakati_text.append(base_form)
+        
+        # 出現回数をカウント
+        word_counts = pd.Series(wakati_text).value_counts().head(10)
+        
+        # 棒グラフで表示
+        fig = px.bar(
+            x=word_counts.index, 
+            y=word_counts.values,
+            title="頻出キーワードTop10",
+            labels={"x": "キーワード", "y": "出現回数"}
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("テキストデータがありません。")
+    
+    # 7. 次週に向けた目標設定（任意入力）
+    st.subheader("🎯 次週の目標設定")
+    
+    # 目標データの保存キー（週ごと）
+    goal_key = f"goal_{start_date.strftime('%Y%m%d')}"
+    
+    # 既存の目標データを取得
+    # 本来はJSONファイルなどに保存するべきですが、簡易的にsession_stateを使用
+    existing_goal = st.session_state.get(goal_key, "")
+    
+    # 目標の入力フィールド
+    new_goal = st.text_area("次週に向けた目標・アクションプラン", value=existing_goal, height=100)
+    
+    if st.button("目標を保存", key="save_goal"):
+        st.session_state[goal_key] = new_goal
+        st.success("✅ 目標を保存しました！")
+    
+    # 8. レポートのエクスポート
+    st.subheader("📋 レポートのエクスポート")
+    
+    if st.button("週間レポートをCSVでエクスポート"):
+        # エクスポート用にデータを整形
+        export_data = week_data.copy()
+        
+        # 日付を文字列に変換
+        export_data['date'] = export_data['date'].dt.strftime('%Y-%m-%d')
+        
+        # CSVとしてエクスポート
+        csv = export_data.to_csv(index=False).encode('utf-8-sig')
+        
+        st.download_button(
+            label="📥 CSVをダウンロード",
+            data=csv,
+            file_name=f"weekly_summary_{start_date.strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+        )
+
 # メイン関数
 def main():
     # ページの設定
@@ -1115,6 +1357,9 @@ def main():
     
     elif menu == "📊 データ分析":
         show_statistics()
+
+    elif menu == "📈 週間サマリー":
+        weekly_summary_report()
       
     elif menu == "🔍高度な可視化分析":
         advanced_visualizations()
