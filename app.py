@@ -84,55 +84,62 @@ def get_entry_by_date(date):
     diary = load_diary()
     return next((d for d in diary if d["date"] == date), None)
 
-# 🎨 サイドバーとスタイル設定
-def setup_page():
-    # サイドバーにアプリタイトルとテーマ選択
-    st.sidebar.title("📖 シンプル日記アプリ")
-    theme = st.sidebar.selectbox("🎨 テーマを選択", ["ライト", "ダーク", "カラフル", "シンプル"])
-    
-    # テーマに基づいたスタイルを適用
-    if theme == "ダーク":
-        st.markdown("""
-        <style>
-        .main {background-color: #1E1E1E; color: #FFFFFF;}
-        .stButton>button {background-color: #4CAF50; color: white;}
-        </style>
-        """, unsafe_allow_html=True)
-    elif theme == "カラフル":
-        st.markdown("""
-        <style>
-        .main {background-color: #F8F9FA;}
-        .stButton>button {background-color: #FF6B6B; color: white;}
-        h1, h2, h3 {color: #5D5FEF;}
-        </style>
-        """, unsafe_allow_html=True)
-    elif theme == "シンプル":
-        st.markdown("""
-        <style>
-        .main {background-color: #FFFFFF; color: #333333;}
-        .stButton>button {background-color: #333333; color: white;}
-        h1, h2, h3 {color: #333333; font-family: 'Helvetica', sans-serif;}
-        </style>
-        """, unsafe_allow_html=True)
-    
-    # 共通のスタイルを適用
-    st.markdown("""
-    <style>
-    .diary-entry {
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-        background-color: rgba(240, 240, 240, 0.3);
-        border-left: 5px solid #4CAF50;
-    }
-    .rating-stars {
-        color: gold;
-        font-size: 20px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    return theme
+# テーマ設定関数  
+def setup_page():  
+    st.sidebar.title("📖 シンプル日記アプリ")  
+    theme = st.sidebar.selectbox("🎨 テーマを選択", ["ライト", "ダーク", "カラフル", "シンプル"])  
+  
+    # テーマに基づいたスタイルを適用  
+    if theme == "ダーク":  
+        st.markdown("""  
+        <style>  
+        .main {background-color: #1E1E1E; color: #FFFFFF;}  
+        .stButton>button {background-color: #4CAF50; color: white;}  
+        .sidebar .sidebar-content {background-color: #333333; color: #FFFFFF;}  
+        .stTextInput>label {color: #FFFFFF;}  
+        .stSelectbox>label {color: #FFFFFF;}  
+        .stSlider>div {color: #FFFFFF;}  
+        h1, h2, h3, h4, h5, h6 {color: #FFFFFF;}  
+        </style>  
+        """, unsafe_allow_html=True)  
+    elif theme == "カラフル":  
+        st.markdown("""  
+        <style>  
+        .main {background-color: #F8F9FA;}  
+        .stButton>button {background-color: #FF6B6B; color: white;}  
+        .sidebar .sidebar-content {background-color: #4B9CD3; color: #FFFFFF;}  
+        .stTextInput>label {color: #333333;}  
+        .stSelectbox>label {color: #333333;}  
+        .stSlider>div {color: #333333;}  
+        h1, h2, h3, h4, h5, h6 {color: #5D5FEF;}  
+        </style>  
+        """, unsafe_allow_html=True)  
+    elif theme == "シンプル":  
+        st.markdown("""  
+        <style>  
+        .main {background-color: #FFFFFF; color: #333333;}  
+        .stButton>button {background-color: #333333; color: white;}  
+        .sidebar .sidebar-content {background-color: #FFFFFF; color: #333333;}  
+        .stTextInput>label {color: #333333;}  
+        .stSelectbox>label {color: #333333;}  
+        .stSlider>div {color: #333333;}  
+        h1, h2, h3, h4, h5, h6 {color: #333333; font-family: 'Helvetica', sans-serif;}  
+        </style>  
+        """, unsafe_allow_html=True)  
+    else:  # default Light theme  
+        st.markdown("""  
+        <style>  
+        .main {background-color: #FFFFFF; color: #000000;}  
+        .stButton>button {background-color: #007BFF; color: white;}  
+        .sidebar .sidebar-content {background-color: #F8F9FA; color: #000000;}  
+        .stTextInput>label {color: #000000;}  
+        .stSelectbox>label {color: #000000;}  
+        .stSlider>div {color: #000000;}  
+        h1, h2, h3, h4, h5, h6 {color: #000000;}  
+        </style>  
+        """, unsafe_allow_html=True)  
+  
+    return theme  
 
 # 📝 日記入力フォーム
 def diary_form():
