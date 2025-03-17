@@ -1380,7 +1380,7 @@ def main():
         elif report_option == "📊 習慣化支援・連続記録":  
             habit_tracking()  
           
-    elif menu == "⚙️ 設定・ヘルプ":
+    elif menu == "設定・ヘルプ":
         st.header("⚙️ 設定・ヘルプ")
         
         with st.expander("📝 アプリについて", expanded=True):
