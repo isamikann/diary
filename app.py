@@ -1,13 +1,4 @@
 import streamlit as st
-
-# ページセットアップ  
-st.set_page_config(  
-    page_title="分析日記アプリ",  
-    page_icon="📖",  
-    layout="wide",  
-    initial_sidebar_state="expanded",  
-)  
-
 import json
 import os
 import pandas as pd
@@ -26,6 +17,14 @@ import requests
 
 # 日本語フォントの設定
 japanize_matplotlib.japanize()
+
+# ページセットアップ  
+st.set_page_config(  
+    page_title="分析日記アプリ",  
+    page_icon="📖",  
+    layout="wide",  
+    initial_sidebar_state="expanded",  
+)  
 
 # GitHub リポジトリ情報  
 GITHUB_REPO = "isamikann/diary"  
