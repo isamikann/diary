@@ -1,6 +1,15 @@
+import streamlit as st
+
+# ページセットアップ  
+st.set_page_config(  
+    page_title="分析日記アプリ",  
+    page_icon="📖",  
+    layout="wide",  
+    initial_sidebar_state="expanded",  
+)  
+
 import json
 import os
-import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
@@ -14,14 +23,6 @@ from io import BytesIO
 from janome.tokenizer import Tokenizer
 import plotly.graph_objects as go
 import requests
-
-# ページセットアップ  
-st.set_page_config(  
-    page_title="分析日記アプリ",  
-    page_icon="📖",  
-    layout="wide",  
-    initial_sidebar_state="expanded",  
-)  
 
 # 日本語フォントの設定
 japanize_matplotlib.japanize()
