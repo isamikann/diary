@@ -1336,45 +1336,43 @@ def main():
     # スタイル適用
     theme = setup_page()
     
-# サイドバーメニュー  
-st.sidebar.markdown("### 📅 メニュー")  
-menu = st.sidebar.selectbox(  
-    "選択してください",  
-    ["日記", "データ分析", "レポート", "設定・ヘルプ"]  
-)  
-  
-if menu == "日記":  
-    diary_option = st.sidebar.radio(  
-        "日記機能",  
-        ["✍️ 新規日記を書く", "📅 過去の日記を表示"]  
+    # サイドバーメニュー  
+    st.sidebar.markdown("### 📅 メニュー")  
+    menu = st.sidebar.selectbox(  
+        "選択してください",  
+        ["日記", "データ分析", "レポート", "設定・ヘルプ"]  
     )  
-    if diary_option == "✍️ 新規日記を書く":  
-        diary_form()  
-    elif diary_option == "📅 過去の日記を表示":  
-        display_entries()  
-  
-elif menu == "データ分析":  
-    analysis_option = st.sidebar.radio(  
-        "分析機能",  
-        ["📊 統計分析", "🔍 高度な可視化分析"]  
-    )  
-    if analysis_option == "📊 統計分析":  
-        show_statistics()  
-    elif analysis_option == "🔍 高度な可視化分析":  
-        advanced_visualizations()  
-  
-elif menu == "レポート":  
-    report_option = st.sidebar.radio(  
-        "レポート機能",  
-        ["📈 週間サマリー", "📊 習慣化支援・連続記録"]  
-    )  
-    if report_option == "📈 週間サマリー":  
-        weekly_summary_report()  
-    elif report_option == "📊 習慣化支援・連続記録":  
-        habit_tracking()  
-  
-elif menu == "設定・ヘルプ":  
-    st.header("⚙️ 設定・ヘルプ")  
+      
+    if menu == "日記":  
+        diary_option = st.sidebar.radio(  
+            "日記機能",  
+            ["✍️ 新規日記を書く", "📅 過去の日記を表示"]  
+        )  
+        if diary_option == "✍️ 新規日記を書く":  
+            diary_form()  
+        elif diary_option == "📅 過去の日記を表示":  
+            display_entries()  
+      
+    elif menu == "データ分析":  
+        analysis_option = st.sidebar.radio(  
+            "分析機能",  
+            ["📊 統計分析", "🔍 高度な可視化分析"]  
+        )  
+        if analysis_option == "📊 統計分析":  
+            show_statistics()  
+        elif analysis_option == "🔍 高度な可視化分析":  
+            advanced_visualizations()  
+      
+    elif menu == "レポート":  
+        report_option = st.sidebar.radio(  
+            "レポート機能",  
+            ["📈 週間サマリー", "📊 習慣化支援・連続記録"]  
+        )  
+        if report_option == "📈 週間サマリー":  
+            weekly_summary_report()  
+        elif report_option == "📊 習慣化支援・連続記録":  
+            habit_tracking()  
+          
     elif menu == "⚙️ 設定・ヘルプ":
         st.header("⚙️ 設定・ヘルプ")
         
