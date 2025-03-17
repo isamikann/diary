@@ -1351,14 +1351,6 @@ def weekly_summary_report():
 
 # メイン関数
 def main():
-    # ページの設定
-    st.set_page_config(
-        page_title="分析日記アプリ",
-        page_icon="📖",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
-    
     # サイドバーメニュー  
     st.sidebar.markdown("### 📅 メニュー")  
     menu = st.sidebar.selectbox(  
